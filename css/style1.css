@@ -1,0 +1,33 @@
+/*h{
+    color:rgb(38, 37, 37);
+    border-style: dashed double ;
+    border-width: 5px 10px 5px 10px;
+    border-color:blue;
+    font-size: 40px;
+    margin:100px;
+    padding: 70px;
+    margin: 150px 200px 20px 200px; 
+}
+*/
+#h{
+    
+    border-width: 5px;
+    border-style: solid;
+    border-color:rgb(0, 0, 0);
+    padding:20px 50px 50px 20px;
+    height:100px;
+    width:100px;
+    text-align: bottom;
+
+    
+    
+}
+#b{
+    background-color:rgb(233, 236, 235);
+    background-image: url("wBG.png");
+    background-repeat: no-repeat;
+    background-position: fixed;
+    background-attachment: fixed;;
+    opacity:100%;
+    border-bottom: 30px;
+}

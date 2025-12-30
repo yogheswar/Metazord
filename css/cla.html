@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Calendar to PDF</title>
+</head>
+<body>
+  <h2>Select Date</h2>
+
+  <input type="date" id="dateInput">
+  <br><br>
+
+  <button onclick="generatePDF()">Download PDF</button>
+
+  <!-- jsPDF CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script>
+    function generatePDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      const selectedDate = document.getElementById("dateInput").value;
+
+      doc.setFontSize(14);
+      doc.text("Selected Date:", 20, 30);
+      doc.text(selectedDate ? selectedDate : "No date selected", 20, 40);
+
+      doc.save("date.pdf");
+    }
+  </script>
+</body>
+</html>
+  

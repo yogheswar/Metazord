@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmer Support | Precise Map Selection</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { background-color: #f4f8f4; font-family: 'Poppins', sans-serif; }
+        .main-card { background: white; border-radius: 20px; border: none; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        #map { height: 550px; width: 100%; z-index: 1; }
+        .selection-panel { padding: 30px; }
+        .section-title { color: #1b5e20; font-weight: 700; border-bottom: 2px solid #e8f5e9; padding-bottom: 10px; margin-bottom: 20px; }
+        .btn-green { background-color: #1b5e20; color: white; transition: 0.3s; border: none; }
+        .btn-green:hover { background-color: #144618; color: white; transform: translateY(-2px); }
+        .loading-text { font-size: 0.8rem; color: #198754; display: none; }
+        @media (max-width: 991px) { #map { height: 400px; } }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-xl-11">
+            <div class="main-card shadow">
+                <div class="row g-0">
+                    <div class="col-lg-7 border-end">
+                        <div id="map"></div>
+                        <div class="bg-light p-2 text-center small text-muted">
+                            <i class="bi bi-info-circle me-1"></i> Zoom in and click exactly on your farm land.
+                        </div>
+                    </div>
+
+                    <div class="col-lg-5">
+                        <div class="selection-panel">
+                            <h4 class="section-title"><i class="bi bi-geo-alt-fill me-2"></i>Farm Location</h4>
+
+                            <div class="mb-4">
+                                <button class="btn btn-outline-primary w-100 py-2 fw-bold" onclick="locateMe()">
+                                    <i class="bi bi-crosshair2 me-2"></i> Use My Current GPS Location
+                                </button>
+                            </div>
+
+                            <div class="mb-4 p-3 bg-light rounded-3">
+                                <label class="form-label fw-bold">Manual Search</label>
+                                <div class="input-group">
+                                    <input type="text" id="manual-village" class="form-control" placeholder="Type Village/Town Name">
+                                    <button class="btn btn-success" type="button" onclick="searchManualLocation()">
+                                        <i class="bi bi-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label class="form-label small fw-bold text-muted text-uppercase">State</label>
+                                    <input type="text" id="res-state" class="form-control bg-light" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted text-uppercase">District</label>
+                                    <input type="text" id="res-district" class="form-control bg-light" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted text-uppercase">Village / Area</label>
+                                    <input type="text" id="res-village" class="form-control bg-light" readonly>
+                                </div>
+                            </div>
+                            
+                            <span id="loading" class="loading-text mt-2"><i class="bi bi-arrow-repeat spin"></i> Identifying area...</span>
+
+                            <div class="alert alert-success mt-4 d-none align-items-center" id="success-msg">
+                                <i class="bi bi-check-circle-fill me-2 fs-5"></i> Location verified!
+                            </div>
+
+                            <button class="btn btn-green w-100 py-3 fw-bold mt-4 shadow-sm" onclick="confirmAndGo()">
+                                Confirm & Proceed to Dashboard <i class="bi bi-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // Global variables to store selected coordinates
+    let currentLat = 11.1271;
+    let currentLon = 78.6569;
+
+    // 1. Map Setup
+    var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+    var labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png');
+    var streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+    var hybridView = L.layerGroup([satellite, labels]);
+
+    var map = L.map('map', { center: [currentLat, currentLon], zoom: 8, layers: [hybridView] });
+    var baseMaps = { "Satellite View": hybridView, "Normal Map": streets };
+    L.control.layers(baseMaps).addTo(map);
+
+    var marker = L.marker([currentLat, currentLon], {draggable: true}).addTo(map);
+
+    // 2. Events
+    map.on('click', function(e) {
+        updateMarker(e.latlng.lat, e.latlng.lng);
+    });
+
+    marker.on('dragend', function(e) {
+        updateMarker(e.target.getLatLng().lat, e.target.getLatLng().lng);
+    });
+
+    function updateMarker(lat, lon) {
+        currentLat = lat;
+        currentLon = lon;
+        marker.setLatLng([lat, lon]);
+        fetchAddress(lat, lon);
+    }
+
+    function locateMe() {
+        map.locate({setView: true, maxZoom: 16});
+    }
+
+    map.on('locationfound', function(e) {
+        updateMarker(e.latlng.lat, e.latlng.lng);
+    });
+
+    // 3. Search & Geocoding
+    function searchManualLocation() {
+        let village = document.getElementById('manual-village').value;
+        if (!village) return alert("Type a name first!");
+
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${village}, Tamil Nadu`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.length > 0) {
+                map.setView([data[0].lat, data[0].lon], 15);
+                updateMarker(data[0].lat, data[0].lon);
+            } else {
+                alert("Location not found!");
+            }
+        });
+    }
+
+    function fetchAddress(lat, lon) {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('success-msg').classList.add('d-none');
+
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`)
+        .then(res => res.json())
+        .then(data => {
+            let a = data.address;
+            document.getElementById('res-state').value = a.state || 'Tamil Nadu';
+            document.getElementById('res-district').value = a.county || a.city_district || 'N/A';
+            document.getElementById('res-village').value = a.village || a.suburb || a.town || a.city || 'Selected Point';
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('success-msg').classList.remove('d-none');
+            document.getElementById('success-msg').classList.add('d-flex');
+        });
+    }
+
+    // 4. Final Navigation
+    function confirmAndGo() {
+        let village = document.getElementById('res-village').value;
+        if(!village) {
+            alert("Please select a location on the map!");
+            return;
+        }
+        // Redirecting with ALL necessary data
+        window.location.href = `dashboard_w.html?lat=${currentLat}&lon=${currentLon}&city=${village}`;
+    }
+</script>
+</body>
+</html>

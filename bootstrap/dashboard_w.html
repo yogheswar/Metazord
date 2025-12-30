@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmer Dashboard | Weather</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f0f4f0; font-family: 'Poppins', sans-serif; }
+        /* Matching the Dark Green Theme */
+        .weather-card { 
+            background: linear-gradient(135deg, #1b5e20, #2e7d32); 
+            color: white; 
+            border-radius: 24px; 
+            padding: 35px; 
+            position: relative;
+            overflow: hidden;
+        }
+        .weather-card::after {
+            content: "\F259"; /* Cloud Icon Background */
+            font-family: "bootstrap-icons";
+            position: absolute;
+            font-size: 10rem;
+            bottom: -20px;
+            right: -20px;
+            opacity: 0.1;
+        }
+        .data-val { font-size: 3.5rem; font-weight: 800; line-height: 1; }
+        .info-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
+        .alert-custom { border-radius: 15px; border: none; font-weight: 500; }
+        .btn-back { border-radius: 12px; font-weight: 600; padding: 10px 25px; }
+    </style>
+</head>
+<body class="py-5">
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-5">
+            
+            <div id="weather-alert" class="alert alert-warning alert-custom mb-4 d-none shadow-sm">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span id="alert-msg">Heavy rain expected. Avoid fertilizer spray!</span>
+            </div>
+
+            <div class="card weather-card shadow-lg border-0 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="info-label text-warning"><i class="bi bi-geo-alt-fill"></i> Your Land</div>
+                    <div class="badge bg-white text-success rounded-pill px-3 py-2 fw-bold shadow-sm">Real-time</div>
+                </div>
+
+                <h2 id="loc-name" class="fw-bold mb-1">Detecting...</h2>
+                <div id="desc" class="fs-5 opacity-75 mb-4 text-capitalize">Updating atmosphere...</div>
+
+                <div class="row align-items-end">
+                    <div class="col-7">
+                        <div class="data-val" id="temp">--°C</div>
+                    </div>
+                    <div class="col-5 text-end">
+                        <div id="weather-icon" style="font-size: 4rem;">
+                            <i class="bi bi-clouds"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4 opacity-25">
+
+                <div class="row text-center">
+                    <div class="col-6 border-end border-white border-opacity-25">
+                        <div class="info-label mb-1">Humidity</div>
+                        <div class="h4 mb-0 fw-bold" id="humidity">--%</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="info-label mb-1">Wind Speed</div>
+                        <div class="h4 mb-0 fw-bold" id="wind">-- km/h</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-2">
+                <a href="location.html" class="btn btn-back btn-outline-success">
+                    <i class="bi bi-arrow-left me-2"></i> Select Different Field
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const params = new URLSearchParams(window.location.search);
+        const lat = params.get('lat');
+        const lon = params.get('lon');
+        const cityParam = params.get('city');
+
+        if (lat && lon) {
+            const apiKey = "ac3c3cd31dcb045db00aafe8189900ad"; 
+            const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+
+            fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                // UI Elements Update
+                document.getElementById('loc-name').innerText = cityParam || data.name || "Selected Field";
+                document.getElementById('temp').innerText = Math.round(data.main.temp) + "°C";
+                document.getElementById('desc').innerText = data.weather[0].description;
+                document.getElementById('humidity').innerText = data.main.humidity + "%";
+                document.getElementById('wind').innerText = Math.round(data.wind.speed * 3.6) + " km/h";
+
+                // Weather Icon & Smart Alert Logic
+                const weatherMain = data.weather[0].main;
+                const iconDiv = document.getElementById('weather-icon');
+                const alertBox = document.getElementById('weather-alert');
+                
+                if (weatherMain === "Rain") {
+                    iconDiv.innerHTML = '<i class="bi bi-cloud-rain-fill"></i>';
+                    alertBox.classList.remove('d-none');
+                } else if (weatherMain === "Clear") {
+                    iconDiv.innerHTML = '<i class="bi bi-sun-fill text-warning"></i>';
+                } else if (weatherMain === "Clouds") {
+                    iconDiv.innerHTML = '<i class="bi bi-cloud-fill"></i>';
+                }
+
+                // High Temperature Alert
+                if (data.main.temp > 35) {
+                    alertBox.classList.remove('d-none');
+                    document.getElementById('alert-msg').innerText = "High heat! Ensure proper irrigation for crops.";
+                }
+            })
+            .catch(() => {
+                document.getElementById('loc-name').innerText = "Offline Data";
+                alert("Could not reach weather server. Check connection.");
+            });
+        } else {
+            alert("Location data missing. Please select your farm on the map.");
+            window.location.href = 'location.html';
+        }
+    });
+</script>
+</body>
+</html>
